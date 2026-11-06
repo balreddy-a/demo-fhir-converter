@@ -1,0 +1,35 @@
+%% CLI run converting one C-CDA file: python -m fhir_converter --from-file ... --source-format CCDA
+sequenceDiagram
+    actor User
+    participant Main as __main__.main
+    participant CR as CcdaRenderer
+    participant Env as Liquid Environment
+    participant Par as parsers.parse_xml
+    participant Tpl as CCD.liquid and includes
+    participant H7 as hl7.parse_fhir
+    participant IO as renderers.render_to_dir
+
+    User->>Main: CLI args
+    Main->>Main: parse_args, get_argparser
+    Main->>CR: get_renderer builds CcdaRenderer
+    CR->>Env: make_environment loader, filters, tags
+    CR->>Env: read_text ValueSet/ValueSet.json
+    Env-->>CR: code_mapping global
+    Main->>IO: render_to_dir from_file, to_dir
+    IO->>IO: open input file and output .json file
+    IO->>CR: render_fhir template_name, data_in, data_out
+    CR->>Par: parse_xml with ccda filter
+    Par-->>CR: msg dict with _originalData
+    CR->>Env: get_template CCD, globals
+    Env-->>CR: template
+    CR->>Tpl: render msg
+    loop each Section and Entry template
+        Tpl->>Tpl: get_ccda_section_by_template_id
+        Tpl->>Tpl: batch_render Entry then Resource templates
+    end
+    Tpl-->>CR: FHIR JSON string
+    CR->>H7: parse_fhir
+    H7-->>CR: dict with merged duplicate entries
+    CR->>IO: encode_io writes JSON to output file
+    IO-->>Main: done, or onerror on failure
+    Main->>User: print_summary and exit code 0 or 1

@@ -1,0 +1,28 @@
+%% Data flow for one conversion (CcdaRenderer._render and Stu3FhirRenderer._render)
+flowchart TD
+    A["Input<br/>file path or text stream"] --> B{"Source format?"}
+
+    B -->|CCDA| C["parse_xml via _parse_cda<br/>lxml tree to nested dict"]
+    C --> C1["after_parse_ccda<br/>adds _originalData = full source XML"]
+    C1 --> C2{"render_narrative<br/>global true?"}
+    C2 -->|yes| C3["section text replaced by<br/>_originalData for XSLT transform"]
+    C2 -->|no| D
+    C3 --> D
+
+    B -->|STU3| S["parse_json<br/>ignore_empty_fields=False"]
+    S --> D
+
+    D["Context: msg = parsed dict<br/>CCDA also gets globals:<br/>code_mapping from ValueSet.json"]
+    D --> E["env.get_template template_name<br/>e.g. CCD, Patient"]
+    E --> F["template.render<br/>include, evaluate, mergeDiff,<br/>batch_render, get_property,<br/>generate_uuid ..."]
+    F --> G["Rendered text<br/>FHIR JSON string"]
+    G --> H["hl7.parse_fhir<br/>JSON5 parse, drop empty values"]
+    H --> I{"Bundle with<br/>more than 1 entry?"}
+    I -->|yes| J["Merge duplicate entries<br/>key = resourceType_versionId_id"]
+    I -->|no| K
+    J --> K["render_fhir<br/>pyjson5.encode_io"]
+    K --> L["FHIR R4 JSON output<br/>string, stream or .json file"]
+
+    F -. "error" .-> X["RenderingError<br/>raised or passed to onerror"]
+    H -. "error" .-> X
+    K -. "error" .-> X

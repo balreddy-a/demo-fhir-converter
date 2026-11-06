@@ -1,0 +1,54 @@
+%% System context.
+%% Solid arrows with numbers = data flow of one conversion.
+%% Dotted arrows = "uses this library" (derived from the import lines in fhir_converter/*.py).
+flowchart LR
+    subgraph Inputs
+        CDA["C-CDA documents<br/>.xml / .ccda"]
+        STU3["FHIR STU3 JSON<br/>resources or bundles"]
+        UTPL["User Liquid templates<br/>optional, --template-dir<br/>or custom Environment"]
+    end
+
+    subgraph Entry["Entry points"]
+        CLI["CLI<br/>python -m fhir_converter<br/>fhir_converter_cli"]
+        LIB["Python library API<br/>CcdaRenderer / Stu3FhirRenderer"]
+    end
+
+    subgraph PKG["fhir_converter package"]
+        REN["renderers.py<br/>orchestrates the conversion"]
+        PAR["parsers.py<br/>XML / JSON to dict"]
+        EXT["filters.py, tags.py, loaders.py<br/>Liquid extensions"]
+        HL7["hl7.py<br/>parse_fhir: clean output,<br/>merge duplicate entries"]
+        TPL["templates/ccda, templates/stu3<br/>packaged Liquid templates"]
+    end
+
+    subgraph Libs["Third-party libraries"]
+        LIQ["python-liquid<br/>template engine"]
+        LX["lxml<br/>XML and XSLT"]
+        J5["pyjson5<br/>JSON read and write"]
+        OTH["frozendict, isodate,<br/>python-dateutil, psutil"]
+    end
+
+    OUT["FHIR R4 JSON<br/>string, stream or .json file"]
+
+    CDA --> CLI
+    STU3 --> CLI
+    CDA --> LIB
+    STU3 --> LIB
+    UTPL --> CLI
+    UTPL --> LIB
+    CLI --> REN
+    LIB --> REN
+
+    REN -->|"1 parse input to dict"| PAR
+    REN -->|"2 render template, msg = dict"| LIQ
+    LIQ -->|"loads and runs"| TPL
+    EXT -.->|"adds filters, tags, loader"| LIQ
+    REN -->|"3 clean and merge output text"| HL7
+    REN -->|"4 serialize and write"| OUT
+
+    PAR -.->|"parse XML"| LX
+    PAR -.->|"parse JSON5"| J5
+    HL7 -.->|"parse_json"| PAR
+    REN -.->|"encode_io writes JSON"| J5
+    REN -.->|"QName, narrative XSLT"| LX
+    PKG -.-> OTH

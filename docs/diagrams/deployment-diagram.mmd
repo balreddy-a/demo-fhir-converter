@@ -1,0 +1,28 @@
+%% Deployment as implemented: a library and CLI, no server, container or infrastructure code in the repo.
+%% CI/CD nodes come from .github/workflows (python-package.yml, mkdocs-gh-pages.yml).
+flowchart LR
+    subgraph Dev["Developer or pipeline host: single Python process"]
+        VENV["Python 3.11+ virtualenv<br/>.venv via Poetry or pip"]
+        PKGI["python-fhir-converter<br/>installed package"]
+        CLIP["CLI process<br/>python -m fhir_converter"]
+        HOST["Host application or data pipeline<br/>imports CcdaRenderer / Stu3FhirRenderer"]
+        FS[("Local file system<br/>input dir, --template-dir, --to-dir")]
+    end
+
+    subgraph Build["GitHub Actions"]
+        CI["python-package.yml<br/>flake8, mypy, pytest matrix, coverage"]
+        DOCS["mkdocs-gh-pages.yml<br/>docs site"]
+    end
+
+    PYPI[("PyPI<br/>python-fhir-converter")]
+    GHP[("GitHub Pages<br/>documentation")]
+    SMK[("smokeshow<br/>coverage report")]
+
+    PYPI -->|pip install| PKGI
+    VENV --- PKGI
+    PKGI --- CLIP
+    PKGI --- HOST
+    CLIP <--> FS
+    HOST <--> FS
+    CI --> SMK
+    DOCS --> GHP

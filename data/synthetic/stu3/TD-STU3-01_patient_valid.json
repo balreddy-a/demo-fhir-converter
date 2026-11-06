@@ -1,0 +1,1 @@
+{"resourceType":"Patient","id":"syn-p1","active":true,"name":[{"use":"official","family":"Example","given":["Alex"]}],"gender":"female","birthDate":"1980-01-01"}

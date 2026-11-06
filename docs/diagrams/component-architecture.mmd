@@ -1,0 +1,51 @@
+%% Module and class level view. Arrows mean "imports / calls"
+flowchart TB
+    MAIN["__main__.py<br/>main, get_argparser, parse_args<br/>get_renderer, render, print_summary<br/>RenderSourceFormat"]
+
+    subgraph renderers["renderers.py"]
+        BASE["BaseFhirRenderer ABC<br/>render_fhir_string, render_fhir<br/>render_to_fhir"]
+        CCDA["CcdaRenderer<br/>_make_globals, _parse_cda, _render"]
+        S3["Stu3FhirRenderer<br/>_parse_stu3, _render"]
+        MKENV["make_environment"]
+        FILEIO["render_to_dir<br/>render_files_to_dir"]
+    end
+
+    PARSERS["parsers.py<br/>parse_xml, parse_json<br/>ParseXmlOpts"]
+    LOADERS["loaders.py<br/>TemplateSystemLoader<br/>CachingTemplateSystemLoader<br/>make_template_system_loader, read_text"]
+    FILTERS["filters.py<br/>all_filters, register_filters<br/>get_property, batch_render, generate_uuid ..."]
+    TAGS["tags.py<br/>EvaluateTag, MergeDiffTag<br/>register_tags"]
+    HL7["hl7.py<br/>parse_fhir, get_ccda_section<br/>hl7_to_fhir_dtm"]
+    UTILS["utils.py<br/>parse_etree, load_xslt, merge_dict<br/>mkdir, walk_path ..."]
+    EXC["exceptions.py<br/>RenderingError, fail"]
+
+    TPLCCDA[("templates/ccda<br/>Liquid + ValueSet.json + cda_narrative.xsl")]
+    TPLSTU3[("templates/stu3<br/>Liquid")]
+
+    LIQUID["python-liquid<br/>Environment, PackageLoader"]
+
+    MAIN --> CCDA
+    MAIN --> S3
+    MAIN --> MKENV
+    MAIN --> FILEIO
+    CCDA -->|extends| BASE
+    S3 -->|extends| BASE
+    BASE --> MKENV
+    MKENV --> LOADERS
+    MKENV --> FILTERS
+    MKENV --> TAGS
+    MKENV --> LIQUID
+    CCDA --> PARSERS
+    S3 --> PARSERS
+    BASE --> HL7
+    BASE --> EXC
+    FILEIO --> EXC
+    FILEIO --> UTILS
+    PARSERS --> UTILS
+    HL7 --> PARSERS
+    HL7 --> UTILS
+    FILTERS --> HL7
+    FILTERS --> UTILS
+    CCDA --> UTILS
+    CCDA --> TPLCCDA
+    S3 --> TPLSTU3
+    LOADERS --> LIQUID
